@@ -1,0 +1,25 @@
+[package]
+name = "qp-compare"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "qp_compare"
+
+[dependencies]
+# Apollo internal dependencies
+apollo-compiler = "1.0.0-beta.24"
+apollo-federation = { git = "https://github.com/apollographql/router", branch = "dev" }
+apollo-federation-types = "^0.13.2"
+harmonizer = "=2.9.3"
+router-bridge = "=0.6.4+v2.9.3"
+
+# Other dependencies
+clap = { version = "4.5", features = ["derive"] }
+diff = "0.1"
+once_cell = "1.19"
+regex = "1.10"
+serde = "1.0"
+serde_json = "1.0"
+serde_json_bytes = { version = "0.2", features = ["preserve_order"] }
+tokio = { version = "1.33", features = ["full"] }

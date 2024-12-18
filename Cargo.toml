@@ -6,6 +6,9 @@ edition = "2021"
 [lib]
 name = "qp_compare"
 
+[profile.release]
+opt-level = 1  # Note: 2 or above seems to cause deno runtime errors.
+
 [dependencies]
 # Apollo internal dependencies
 apollo-compiler = "1.0.0-beta.24"

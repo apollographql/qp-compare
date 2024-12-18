@@ -5,8 +5,6 @@ pub mod router;
 
 pub use apollo_compiler;
 pub use apollo_federation;
-pub use apollo_federation_types;
-pub use harmonizer;
 pub use router_bridge;
 
 //=================================================================================================

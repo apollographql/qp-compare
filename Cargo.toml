@@ -10,8 +10,6 @@ name = "qp_compare"
 # Apollo internal dependencies
 apollo-compiler = "1.0.0-beta.24"
 apollo-federation = { git = "https://github.com/apollographql/router", branch = "dev" }
-apollo-federation-types = "^0.13.2"
-harmonizer = "=2.9.3"
 router-bridge = "=0.6.4+v2.9.3"
 
 # Other dependencies

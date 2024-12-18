@@ -77,6 +77,7 @@ pub fn run_both_planners(schema_str: &str, query_str: &str, args: &PlanArgs) -> 
         Default::default(),
     )
     .map_err(|err| err.to_string())?;
+    println!("{}", rust_plan);
     let js_plan = run_legacy_planner(schema_str, query_str, None, args.into(), Default::default())
         .map_err(|err| err.join("\n"))?;
     if args.dump_plans {
@@ -110,9 +111,6 @@ fn main() -> ExitCode {
             ExitCode::FAILURE
         }
 
-        Ok(_) => {
-            println!("qp matched");
-            ExitCode::SUCCESS
-        }
+        Ok(_) => ExitCode::SUCCESS,
     }
 }

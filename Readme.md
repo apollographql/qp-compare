@@ -1,6 +1,6 @@
 # QP Compare
 
-This repository keeps a part of apollo-router executing the legacy query planner and comparing its result against that of the new native query planner, which is often called the "semantic diff".
+This repository keeps an old part of apollo-router executing the legacy query planner and comparing its result against that of the new native query planner, which is called the "semantic diff".
 
 ## Build
 

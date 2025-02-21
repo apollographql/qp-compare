@@ -2,10 +2,10 @@
 
 use std::sync::Arc;
 
-use apollo_compiler::ast;
-use apollo_compiler::validation::Valid;
 use apollo_compiler::ExecutableDocument;
 use apollo_compiler::Name;
+use apollo_compiler::ast;
+use apollo_compiler::validation::Valid;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json_bytes::Value;

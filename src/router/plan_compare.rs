@@ -9,15 +9,11 @@ use std::hash::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
 
-use apollo_compiler::ast;
 use apollo_compiler::Name;
 use apollo_compiler::Node;
+use apollo_compiler::ast;
 use apollo_federation::query_plan::QueryPlan as NativeQueryPlan;
 
-use super::convert::convert_root_query_plan_node;
-use super::path::Path;
-use super::path::PathElement;
-use super::selection::Selection;
 use super::DataRewrite;
 use super::DeferredNode;
 use super::FetchNode;
@@ -27,6 +23,10 @@ use super::Primary;
 use super::QueryPlanResult;
 use super::SubgraphOperation;
 use super::SubscriptionNode;
+use super::convert::convert_root_query_plan_node;
+use super::path::Path;
+use super::path::PathElement;
+use super::selection::Selection;
 
 //==================================================================================================
 // Public interface
@@ -433,7 +433,7 @@ fn plan_node_matches(this: &PlanNode, other: &PlanNode) -> Result<(), MatchFailu
             return Err(MatchFailure::new(format!(
                 "mismatched plan node types\nleft: {:?}\nright: {:?}",
                 this, other
-            )))
+            )));
         }
     };
     Ok(())
@@ -816,7 +816,7 @@ fn ast_value_maybe_coerced_to(x: &ast::Value, y: &ast::Value) -> bool {
     match (x, y) {
         // Special case 1: JS QP may convert an enum value into string.
         // - In this case, compare them as strings.
-        (ast::Value::String(ref x), ast::Value::Enum(ref y)) => {
+        (ast::Value::String(x), ast::Value::Enum(y)) => {
             if x == y.as_str() {
                 return true;
             }
@@ -827,7 +827,7 @@ fn ast_value_maybe_coerced_to(x: &ast::Value, y: &ast::Value) -> bool {
         // - If the Rust QP object value subsumes the JS QP object value, consider it a match.
         // - Assuming the Rust QP object value has only default field values.
         // - Warning: This is an unsound heuristic.
-        (ast::Value::Object(ref x), ast::Value::Object(ref y)) => {
+        (ast::Value::Object(x), ast::Value::Object(y)) => {
             if vec_includes_as_set(y, x, |(yy_name, yy_val), (xx_name, xx_val)| {
                 xx_name == yy_name
                     && (xx_val == yy_val || ast_value_maybe_coerced_to(xx_val, yy_val))
@@ -839,14 +839,14 @@ fn ast_value_maybe_coerced_to(x: &ast::Value, y: &ast::Value) -> bool {
         // Special case 3: JS QP may convert string to int for custom scalars, while Rust doesn't.
         // - Note: This conversion seems a bit difficult to implement in the `apollo-federation`'s
         //         `coerce_value` function, since IntValue's constructor is private to the crate.
-        (ast::Value::Int(ref x), ast::Value::String(ref y)) => {
+        (ast::Value::Int(x), ast::Value::String(y)) => {
             if x.as_str() == y {
                 return true;
             }
         }
 
         // Recurse into list items.
-        (ast::Value::List(ref x), ast::Value::List(ref y)) => {
+        (ast::Value::List(x), ast::Value::List(y)) => {
             if vec_matches(x, y, |xx, yy| {
                 xx == yy || ast_value_maybe_coerced_to(xx, yy)
             }) {

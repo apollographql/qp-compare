@@ -21,8 +21,8 @@ pub use crate::router::render_native_plan;
 
 pub use crate::router::QueryPlanResult as LegacyQueryPlanResult;
 pub use apollo_federation::error::FederationError;
-pub use apollo_federation::query_plan::query_planner as native_planner;
 pub use apollo_federation::query_plan::QueryPlan as NativeQueryPlan;
+pub use apollo_federation::query_plan::query_planner as native_planner;
 pub use router_bridge::planner as legacy_planner;
 
 pub fn run_native_planner(

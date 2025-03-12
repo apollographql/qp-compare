@@ -4,7 +4,6 @@ mod convert;
 mod path;
 mod plan;
 pub(crate) mod plan_compare;
-mod selection;
 
 use std::sync::Arc;
 

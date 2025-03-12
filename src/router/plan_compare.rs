@@ -1,4 +1,6 @@
 // Copied from `apollo-router/src/query_planner/plan_compare.rs` with a minor refactoring.
+// - final version commit d9336e43f
+// - patched after commit: 2421f22724 (QueryPlan deserialization refactoring)
 
 // Semantic comparison of JS and Rust query plans
 
@@ -13,6 +15,8 @@ use apollo_compiler::Name;
 use apollo_compiler::Node;
 use apollo_compiler::ast;
 use apollo_federation::query_plan::QueryPlan as NativeQueryPlan;
+use apollo_federation::query_plan::requires_selection::Selection;
+use apollo_federation::query_plan::serializable_document::SerializableDocument;
 
 use super::DataRewrite;
 use super::DeferredNode;
@@ -21,12 +25,10 @@ use super::FlattenNode;
 use super::PlanNode;
 use super::Primary;
 use super::QueryPlanResult;
-use super::SubgraphOperation;
 use super::SubscriptionNode;
 use super::convert::convert_root_query_plan_node;
 use super::path::Path;
 use super::path::PathElement;
-use super::selection::Selection;
 
 //==================================================================================================
 // Public interface
@@ -602,10 +604,14 @@ enum SelectionKey {
     },
 }
 
+fn field_response_name(field: &apollo_federation::query_plan::requires_selection::Field) -> &Name {
+    field.alias.as_ref().unwrap_or(&field.name)
+}
+
 fn get_selection_key(selection: &Selection) -> SelectionKey {
     match selection {
         Selection::Field(field) => SelectionKey::Field {
-            response_name: field.response_name().clone(),
+            response_name: field_response_name(field).clone(),
             directives: Default::default(),
         },
         Selection::InlineFragment(fragment) => SelectionKey::InlineFragment {
@@ -631,11 +637,7 @@ fn same_selection(x: &Selection, y: &Selection) -> bool {
         (Selection::Field(x), Selection::Field(y)) => {
             x.name == y.name
                 && x.alias == y.alias
-                && match (&x.selections, &y.selections) {
-                    (Some(x), Some(y)) => same_selection_set_sorted(x, y),
-                    (None, None) => true,
-                    _ => false,
-                }
+                && same_selection_set_sorted(&x.selections, &y.selections)
         }
         (Selection::InlineFragment(x), Selection::InlineFragment(y)) => {
             x.type_condition == y.type_condition
@@ -674,8 +676,8 @@ fn same_rewrites(x: &Option<Vec<DataRewrite>>, y: &Option<Vec<DataRewrite>>) -> 
 }
 
 fn operation_matches(
-    this: &SubgraphOperation,
-    other: &SubgraphOperation,
+    this: &SerializableDocument,
+    other: &SerializableDocument,
 ) -> Result<(), MatchFailure> {
     document_str_matches(this.as_serialized(), other.as_serialized())
 }

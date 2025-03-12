@@ -1,17 +1,17 @@
-// Copied from `apollo-router/src/query_planner/plan.rs`.
+// Copied from `apollo-router/src/query_planner/plan.rs` and other sibling modules
+// (commit: 2421f22724)
 
 use std::sync::Arc;
 
-use apollo_compiler::ExecutableDocument;
 use apollo_compiler::Name;
 use apollo_compiler::ast;
-use apollo_compiler::validation::Valid;
+use apollo_federation::query_plan::requires_selection::Selection;
+use apollo_federation::query_plan::serializable_document::SerializableDocument;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json_bytes::Value;
 
 use crate::router::path::Path;
-use crate::router::selection::Selection;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -161,7 +161,7 @@ pub(crate) struct FetchNode {
     pub(crate) variable_usages: Vec<Arc<str>>,
 
     /// The GraphQL subquery that is used for the fetch.
-    pub(crate) operation: SubgraphOperation,
+    pub(crate) operation: SerializableDocument,
 
     /// The GraphQL subquery operation name.
     pub(crate) operation_name: Option<Arc<str>>,
@@ -180,71 +180,6 @@ pub(crate) struct FetchNode {
 
     // Optionally describes a number of "rewrites" to apply to the data that has already been received further up the tree
     pub(crate) context_rewrites: Option<Vec<DataRewrite>>,
-}
-
-#[derive(Clone)]
-pub(crate) struct SubgraphOperation {
-    serialized: String,
-    // /// Ideally this would be always present, but we don’t have access to the subgraph schemas
-    // /// during `Deserialize`.
-    // parsed: Option<Arc<Valid<ExecutableDocument>>>,
-}
-
-impl SubgraphOperation {
-    pub(crate) fn from_string(serialized: impl Into<String>) -> Self {
-        Self {
-            serialized: serialized.into(),
-            // parsed: None,
-        }
-    }
-
-    pub(crate) fn from_parsed(parsed: impl Into<Arc<Valid<ExecutableDocument>>>) -> Self {
-        let parsed = parsed.into();
-        Self {
-            serialized: parsed.serialize().no_indent().to_string(),
-            // parsed: Some(parsed),
-        }
-    }
-
-    pub(crate) fn as_serialized(&self) -> &str {
-        &self.serialized
-    }
-}
-
-impl Serialize for SubgraphOperation {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.as_serialized().serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for SubgraphOperation {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        Ok(Self::from_string(String::deserialize(deserializer)?))
-    }
-}
-
-impl PartialEq for SubgraphOperation {
-    fn eq(&self, other: &Self) -> bool {
-        self.as_serialized() == other.as_serialized()
-    }
-}
-
-impl std::fmt::Debug for SubgraphOperation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self.as_serialized(), f)
-    }
-}
-
-impl std::fmt::Display for SubgraphOperation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Display::fmt(self.as_serialized(), f)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -278,7 +213,7 @@ pub(crate) struct SubscriptionNode {
     pub(crate) variable_usages: Vec<Arc<str>>,
 
     /// The GraphQL subquery that is used for the subscription.
-    pub(crate) operation: SubgraphOperation,
+    pub(crate) operation: SerializableDocument,
 
     /// The GraphQL subquery operation name.
     pub(crate) operation_name: Option<Arc<str>>,

@@ -1,4 +1,4 @@
-// Copied from `apollo-router/src/json_ext.rs`.
+// Copied from `apollo-router/src/json_ext.rs` (commit: d9336e43f)
 
 use std::fmt;
 

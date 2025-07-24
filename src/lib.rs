@@ -33,7 +33,7 @@ pub fn run_native_planner(
     config: native_planner::QueryPlannerConfig,
     plan_options: native_planner::QueryPlanOptions,
 ) -> Result<NativeQueryPlan, FederationError> {
-    let supergraph = apollo_federation::Supergraph::new(schema_str).unwrap();
+    let supergraph = apollo_federation::Supergraph::new_with_router_specs(schema_str).unwrap();
     let planner = native_planner::QueryPlanner::new(&supergraph, config)?;
     let query_doc = apollo_compiler::ExecutableDocument::parse_and_validate(
         planner.api_schema().schema(),

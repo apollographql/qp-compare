@@ -16,9 +16,9 @@ use crate::router::path::Path;
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
 /// The root query plan container.
-pub(super) struct QueryPlan {
+pub(crate) struct QueryPlan {
     /// The hierarchical nodes that make up the query plan
-    pub(super) node: Option<Arc<PlanNode>>,
+    pub(crate) node: Option<Arc<PlanNode>>,
 }
 
 /// Query plans are composed of a set of nodes.

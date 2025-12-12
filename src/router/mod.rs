@@ -1,8 +1,8 @@
 //! In order to avoid importing the `apollo-router` crate, some of its code is duplicated here.
 
 mod convert;
-mod path;
-mod plan;
+pub(crate) mod path;
+pub(crate) mod plan;
 pub(crate) mod plan_compare;
 
 use std::sync::Arc;

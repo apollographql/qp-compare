@@ -209,18 +209,18 @@ impl fmt::Display for Path {
                 PathElement::Index(index) => write!(f, "{index}")?,
                 PathElement::Key(key, type_conditions) => {
                     write!(f, "{key}")?;
-                    if let Some(c) = type_conditions {
-                        if !c.is_empty() {
-                            write!(f, "|[{}]", c.join(","))?;
-                        }
+                    if let Some(c) = type_conditions
+                        && !c.is_empty()
+                    {
+                        write!(f, "|[{}]", c.join(","))?;
                     };
                 }
                 PathElement::Flatten(type_conditions) => {
                     write!(f, "@")?;
-                    if let Some(c) = type_conditions {
-                        if !c.is_empty() {
-                            write!(f, "|[{}]", c.join(","))?;
-                        }
+                    if let Some(c) = type_conditions
+                        && !c.is_empty()
+                    {
+                        write!(f, "|[{}]", c.join(","))?;
                     };
                 }
                 PathElement::Fragment(name) => {

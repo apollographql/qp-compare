@@ -870,10 +870,10 @@ fn same_variable_definition(
     check_match_eq!(x.name, y.name);
     check_match_eq!(x.ty, y.ty);
     if x.default_value != y.default_value {
-        if let (Some(x), Some(y)) = (&x.default_value, &y.default_value) {
-            if ast_value_maybe_coerced_to(x, y) {
-                return Ok(());
-            }
+        if let (Some(x), Some(y)) = (&x.default_value, &y.default_value)
+            && ast_value_maybe_coerced_to(x, y)
+        {
+            return Ok(());
         }
 
         return Err(MatchFailure::new(format!(

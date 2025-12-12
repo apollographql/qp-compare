@@ -291,7 +291,8 @@ impl From<&'_ path::PathElement> for next::FetchDataPathElement {
                     Self::Parent
                 } else {
                     Self::Key(
-                        Name::new(name).expect("valid key name"),
+                        // TODO: unchecked due to the empty root key string.
+                        Name::new_unchecked(name),
                         conditions.as_ref().map(|c| {
                             c.iter()
                                 .map(|s| Name::new(s).expect("valid condition name"))
@@ -312,5 +313,11 @@ impl From<&'_ path::PathElement> for next::FetchDataPathElement {
                 Self::TypenameEquals(Name::new(type_name).expect("valid type name"))
             }
         }
+    }
+}
+
+impl From<&path::Path> for Vec<next::FetchDataPathElement> {
+    fn from(value: &path::Path) -> Self {
+        value.0.iter().map(Into::into).collect()
     }
 }

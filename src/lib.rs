@@ -1,3 +1,4 @@
+mod compare;
 mod convert;
 pub mod router;
 
@@ -11,11 +12,10 @@ pub use router_bridge;
 //=================================================================================================
 // Export semantic diff functions
 
-pub use crate::router::plan_compare::diff_plan;
-pub use crate::router::plan_compare::plan_matches;
-pub use crate::router::plan_compare::render_diff;
 pub use crate::router::render_legacy_plan;
 pub use crate::router::render_native_plan;
+pub use compare::diff_plan;
+pub use compare::plan_matches;
 
 //=================================================================================================
 // Helper functions for running query planners
@@ -63,4 +63,8 @@ pub fn run_legacy_planner(
         return Err(errors.iter().map(|e| e.to_string()).collect());
     }
     Ok(result.data.unwrap())
+}
+
+pub fn convert_legacy_query_plan(js_plan: &LegacyQueryPlanResult) -> NativeQueryPlan {
+    convert::convert_root_query_plan_node(&js_plan.query_plan)
 }

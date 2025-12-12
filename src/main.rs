@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use qp_compare::convert_legacy_query_plan;
 use qp_compare::diff_plan;
 use qp_compare::legacy_planner;
 use qp_compare::native_planner;
@@ -89,6 +90,7 @@ pub fn run_both_planners(schema_str: &str, query_str: &str, args: &PlanArgs) -> 
         write_file("./plan_native.txt", rust_plan.to_string().as_str());
         write_file("./plan_native.detail.txt", &render_native_plan(&rust_plan));
     }
+    let js_plan = convert_legacy_query_plan(&js_plan);
     match plan_matches(&js_plan, &rust_plan) {
         Ok(_) => Ok(()),
         Err(match_failure) => {

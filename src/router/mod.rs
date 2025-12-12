@@ -3,6 +3,7 @@
 mod convert;
 pub(crate) mod path;
 pub(crate) mod plan;
+#[allow(dead_code)]
 pub(crate) mod plan_compare;
 
 use std::sync::Arc;
@@ -20,7 +21,7 @@ use serde::Deserialize;
 #[serde(rename_all = "camelCase")]
 pub struct QueryPlanResult {
     pub formatted_query_plan: Option<Arc<String>>,
-    query_plan: self::plan::QueryPlan,
+    pub(crate) query_plan: self::plan::QueryPlan,
 }
 
 //=================================================================================================

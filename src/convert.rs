@@ -4,107 +4,102 @@ use std::sync::Arc;
 use apollo_compiler::Name;
 use apollo_federation::query_plan as next;
 
-use crate::router::path;
-use crate::router::plan;
+use crate::router::path::Path;
+use crate::router::path::PathElement;
+use crate::router::plan as legacy;
 
-pub(crate) fn convert_root_query_plan_node(legacy: &plan::QueryPlan) -> next::QueryPlan {
-    let plan::QueryPlan { node } = legacy;
+pub(crate) fn convert_root_query_plan_node(plan: &legacy::QueryPlan) -> next::QueryPlan {
+    let legacy::QueryPlan { node } = plan;
     next::QueryPlan {
         node: node.as_ref().map(|n| n.as_ref().into()),
         statistics: Default::default(),
     }
 }
 
-impl From<&'_ plan::PlanNode> for next::TopLevelPlanNode {
-    fn from(value: &'_ plan::PlanNode) -> Self {
+impl From<&'_ legacy::PlanNode> for next::TopLevelPlanNode {
+    fn from(value: &'_ legacy::PlanNode) -> Self {
         match value {
-            plan::PlanNode::Subscription { primary, rest } => {
-                Self::Subscription(next::SubscriptionNode {
-                    primary: Box::new(primary.into()),
-                    rest: rest.as_ref().map(|r| {
-                        let node: next::PlanNode = r.as_ref().into();
-                        Box::new(node)
-                    }),
-                })
-            }
-            plan::PlanNode::Fetch(node) => Self::Fetch(Box::new(node.into())),
-            plan::PlanNode::Sequence { nodes } => Self::Sequence(next::SequenceNode {
-                nodes: nodes.iter().map(Into::into).collect(),
+            legacy::PlanNode::Fetch(node) => Self::Fetch(into_box(node)),
+            legacy::PlanNode::Sequence { nodes } => Self::Sequence(next::SequenceNode {
+                nodes: into_vec(nodes),
             }),
-            plan::PlanNode::Parallel { nodes } => Self::Parallel(next::ParallelNode {
-                nodes: nodes.iter().map(Into::into).collect(),
+            legacy::PlanNode::Parallel { nodes } => Self::Parallel(next::ParallelNode {
+                nodes: into_vec(nodes),
             }),
-            plan::PlanNode::Flatten(node) => Self::Flatten(node.into()),
-            plan::PlanNode::Defer { primary, deferred } => Self::Defer(next::DeferNode {
+            legacy::PlanNode::Flatten(node) => Self::Flatten(node.into()),
+            legacy::PlanNode::Defer { primary, deferred } => Self::Defer(next::DeferNode {
                 primary: primary.into(),
-                deferred: deferred.iter().map(Into::into).collect(),
+                deferred: into_vec(deferred),
             }),
-            plan::PlanNode::Condition {
+            legacy::PlanNode::Condition {
                 condition,
                 if_clause,
                 else_clause,
-            } => Self::Condition(Box::new(next::ConditionNode {
-                condition_variable: Name::new(condition).expect("valid condition variable name"),
-                if_clause: if_clause.as_ref().map(|c| {
-                    let node: next::PlanNode = c.as_ref().into();
-                    Box::new(node)
-                }),
-                else_clause: else_clause.as_ref().map(|c| {
-                    let node: next::PlanNode = c.as_ref().into();
-                    Box::new(node)
-                }),
-            })),
+            } => Self::Condition(from_legacy_condition_node(
+                condition,
+                if_clause,
+                else_clause,
+            )),
+            legacy::PlanNode::Subscription { primary, rest } => {
+                Self::Subscription(from_legacy_subscription_node(primary, rest))
+            }
         }
     }
 }
 
-impl From<&'_ plan::PlanNode> for next::PlanNode {
-    fn from(value: &'_ plan::PlanNode) -> Self {
+impl From<&'_ legacy::PlanNode> for next::PlanNode {
+    fn from(value: &'_ legacy::PlanNode) -> Self {
         match value {
-            plan::PlanNode::Fetch(node) => Self::Fetch(Box::new(node.into())),
-            plan::PlanNode::Sequence { nodes } => Self::Sequence(next::SequenceNode {
-                nodes: nodes.iter().map(Into::into).collect(),
+            legacy::PlanNode::Fetch(node) => Self::Fetch(into_box(node)),
+            legacy::PlanNode::Sequence { nodes } => Self::Sequence(next::SequenceNode {
+                nodes: into_vec(nodes),
             }),
-            plan::PlanNode::Parallel { nodes } => Self::Parallel(next::ParallelNode {
-                nodes: nodes.iter().map(Into::into).collect(),
+            legacy::PlanNode::Parallel { nodes } => Self::Parallel(next::ParallelNode {
+                nodes: into_vec(nodes),
             }),
-            plan::PlanNode::Flatten(node) => Self::Flatten(node.into()),
-            plan::PlanNode::Defer { primary, deferred } => Self::Defer(next::DeferNode {
+            legacy::PlanNode::Flatten(node) => Self::Flatten(node.into()),
+            legacy::PlanNode::Defer { primary, deferred } => Self::Defer(next::DeferNode {
                 primary: primary.into(),
-                deferred: deferred.iter().map(Into::into).collect(),
+                deferred: into_vec(deferred),
             }),
-            plan::PlanNode::Condition {
+            legacy::PlanNode::Condition {
                 condition,
                 if_clause,
                 else_clause,
-            } => Self::Condition(Box::new(next::ConditionNode {
-                condition_variable: Name::new(condition).expect("valid condition variable name"),
-                if_clause: if_clause.as_ref().map(|c| {
-                    let node: next::PlanNode = c.as_ref().into();
-                    Box::new(node)
-                }),
-                else_clause: else_clause.as_ref().map(|c| {
-                    let node: next::PlanNode = c.as_ref().into();
-                    Box::new(node)
-                }),
-            })),
-            plan::PlanNode::Subscription { .. } => {
+            } => Self::Condition(from_legacy_condition_node(
+                condition,
+                if_clause,
+                else_clause,
+            )),
+            legacy::PlanNode::Subscription { .. } => {
                 panic!("Subscription nodes should only appear at the top level")
             }
         }
     }
 }
 
-impl From<&'_ plan::FetchNode> for next::FetchNode {
-    fn from(value: &'_ plan::FetchNode) -> Self {
-        let plan::FetchNode {
+fn from_legacy_condition_node(
+    condition: &str,
+    if_clause: &Option<Box<legacy::PlanNode>>,
+    else_clause: &Option<Box<legacy::PlanNode>>,
+) -> Box<next::ConditionNode> {
+    Box::new(next::ConditionNode {
+        condition_variable: Name::new(condition).expect("valid condition variable name"),
+        if_clause: into_box_option(if_clause),
+        else_clause: into_box_option(else_clause),
+    })
+}
+
+impl From<&'_ legacy::FetchNode> for next::FetchNode {
+    fn from(value: &'_ legacy::FetchNode) -> Self {
+        let legacy::FetchNode {
             service_name,
+            id,
             requires,
             variable_usages,
             operation,
             operation_name,
             operation_kind,
-            id,
             input_rewrites,
             output_rewrites,
             context_rewrites,
@@ -122,89 +117,72 @@ impl From<&'_ plan::FetchNode> for next::FetchNode {
                 .as_ref()
                 .map(|n| Name::new(n.as_ref()).expect("valid operation name")),
             operation_kind: (*operation_kind).into(),
-            input_rewrites: Arc::new(
-                input_rewrites
-                    .as_ref()
-                    .map(|v| v.iter().map(|r| Arc::new(r.into())).collect::<Vec<_>>())
-                    .unwrap_or_default(),
-            ),
-            output_rewrites: output_rewrites
-                .as_ref()
-                .map(|v| v.iter().map(|r| Arc::new(r.into())).collect::<Vec<_>>())
-                .unwrap_or_default(),
-            context_rewrites: context_rewrites
-                .as_ref()
-                .map(|v| v.iter().map(|r| Arc::new(r.into())).collect::<Vec<_>>())
-                .unwrap_or_default(),
+            input_rewrites: Arc::new(into_arc_vec_option(input_rewrites)),
+            output_rewrites: into_arc_vec_option(output_rewrites),
+            context_rewrites: into_arc_vec_option(context_rewrites),
         }
     }
 }
 
-impl From<&'_ plan::FlattenNode> for next::FlattenNode {
-    fn from(value: &'_ plan::FlattenNode) -> Self {
-        let plan::FlattenNode { path, node } = value;
+fn from_legacy_subscription_node(
+    primary: &legacy::SubscriptionNode,
+    rest: &Option<Box<legacy::PlanNode>>,
+) -> next::SubscriptionNode {
+    let legacy::SubscriptionNode {
+        service_name,
+        variable_usages,
+        operation,
+        operation_name,
+        operation_kind,
+        input_rewrites,
+        output_rewrites,
+    } = primary;
+    let primary = next::FetchNode {
+        subgraph_name: service_name.clone(),
+        id: None,
+        variable_usages: variable_usages
+            .iter()
+            .map(|v| Name::new(v).expect("valid variable name"))
+            .collect(),
+        requires: vec![],
+        operation_document: operation.clone(),
+        operation_name: operation_name
+            .as_ref()
+            .map(|n| Name::new(n.as_ref()).expect("valid operation name")),
+        operation_kind: (*operation_kind).into(),
+        input_rewrites: Arc::new(into_arc_vec_option(input_rewrites)),
+        output_rewrites: into_arc_vec_option(output_rewrites),
+        context_rewrites: vec![],
+    };
+    next::SubscriptionNode {
+        primary: into_box(primary),
+        rest: into_box_option(rest),
+    }
+}
+
+impl From<&'_ legacy::FlattenNode> for next::FlattenNode {
+    fn from(value: &'_ legacy::FlattenNode) -> Self {
+        let legacy::FlattenNode { path, node } = value;
         Self {
-            path: path.0.iter().map(Into::into).collect(),
-            node: Box::new(node.as_ref().into()),
+            path: into_vec(&path.0),
+            node: into_box(node.as_ref()),
         }
     }
 }
 
-impl From<&'_ plan::SubscriptionNode> for next::FetchNode {
-    fn from(value: &'_ plan::SubscriptionNode) -> Self {
-        let plan::SubscriptionNode {
-            service_name,
-            variable_usages,
-            operation,
-            operation_name,
-            operation_kind,
-            input_rewrites,
-            output_rewrites,
-        } = value;
-        Self {
-            subgraph_name: service_name.clone(),
-            id: None,
-            variable_usages: variable_usages
-                .iter()
-                .map(|v| Name::new(v).expect("valid variable name"))
-                .collect(),
-            requires: vec![],
-            operation_document: operation.clone(),
-            operation_name: operation_name
-                .as_ref()
-                .map(|n| Name::new(n.as_ref()).expect("valid operation name")),
-            operation_kind: (*operation_kind).into(),
-            input_rewrites: Arc::new(
-                input_rewrites
-                    .as_ref()
-                    .map(|v| v.iter().map(|r| Arc::new(r.into())).collect::<Vec<_>>())
-                    .unwrap_or_default(),
-            ),
-            output_rewrites: output_rewrites
-                .as_ref()
-                .map(|v| v.iter().map(|r| Arc::new(r.into())).collect::<Vec<_>>())
-                .unwrap_or_default(),
-            context_rewrites: vec![],
-        }
-    }
-}
-
-impl From<&'_ plan::Primary> for next::PrimaryDeferBlock {
-    fn from(value: &'_ plan::Primary) -> Self {
-        let plan::Primary { node, subselection } = value;
+impl From<&'_ legacy::Primary> for next::PrimaryDeferBlock {
+    fn from(value: &'_ legacy::Primary) -> Self {
+        let legacy::Primary { node, subselection } = value;
         Self {
             sub_selection: subselection.clone(),
-            node: node.as_ref().map(|n| {
-                let plan_node: next::PlanNode = n.as_ref().into();
-                Box::new(plan_node)
-            }),
+            node: into_box_option(node),
         }
     }
 }
 
-impl From<&'_ plan::DeferredNode> for next::DeferredDeferBlock {
-    fn from(value: &'_ plan::DeferredNode) -> Self {
-        let plan::DeferredNode {
+impl From<&'_ legacy::DeferredNode> for next::DeferredDeferBlock {
+    fn from(value: &'_ legacy::DeferredNode) -> Self {
+        let legacy::DeferredNode {
             depends,
             label,
             query_path,
@@ -212,14 +190,16 @@ impl From<&'_ plan::DeferredNode> for next::DeferredDeferBlock {
             node,
         } = value;
         Self {
-            depends: depends.iter().map(Into::into).collect(),
+            depends: into_vec(depends),
             label: label.clone(),
             query_path: query_path
                 .0
                 .iter()
                 .filter_map(|e| match e {
-                    path::PathElement::Key(key, _conditions) => {
+                    // Note: Currently, no type conditioned fetching for deferred queries.
+                    PathElement::Key(key, _conditions) => {
                         if key == ".." {
+                            // Unexpected parent key
                             None
                         } else {
                             Some(next::QueryPathElement::Field {
@@ -227,97 +207,127 @@ impl From<&'_ plan::DeferredNode> for next::DeferredDeferBlock {
                             })
                         }
                     }
-                    path::PathElement::Fragment(type_name) => {
+                    PathElement::Fragment(type_name) => {
                         Some(next::QueryPathElement::InlineFragment {
                             type_condition: Name::new(type_name).expect("valid type name"),
                         })
                     }
-                    path::PathElement::Flatten(_) | path::PathElement::Index(_) => None,
+                    // Unexpected path keys
+                    PathElement::Flatten(_) | PathElement::Index(_) => None,
                 })
                 .collect(),
             sub_selection: subselection.clone(),
-            node: node.as_ref().map(|n| {
-                let plan_node: next::PlanNode = n.as_ref().into();
-                Box::new(plan_node)
-            }),
+            node: node.as_ref().map(|n| into_box(n.as_ref())),
         }
     }
 }
 
-impl From<&'_ plan::Depends> for next::DeferredDependency {
-    fn from(value: &'_ plan::Depends) -> Self {
-        let plan::Depends { id } = value;
+impl From<&'_ legacy::Depends> for next::DeferredDependency {
+    fn from(value: &'_ legacy::Depends) -> Self {
+        let legacy::Depends { id } = value;
         Self { id: id.clone() }
     }
 }
 
-impl From<&'_ plan::DataRewrite> for next::FetchDataRewrite {
-    fn from(value: &'_ plan::DataRewrite) -> Self {
+impl From<&'_ legacy::DataRewrite> for next::FetchDataRewrite {
+    fn from(value: &'_ legacy::DataRewrite) -> Self {
         match value {
-            plan::DataRewrite::ValueSetter(setter) => Self::ValueSetter(setter.into()),
-            plan::DataRewrite::KeyRenamer(renamer) => Self::KeyRenamer(renamer.into()),
+            legacy::DataRewrite::ValueSetter(setter) => Self::ValueSetter(setter.into()),
+            legacy::DataRewrite::KeyRenamer(renamer) => Self::KeyRenamer(renamer.into()),
         }
     }
 }
 
-impl From<&'_ plan::DataValueSetter> for next::FetchDataValueSetter {
-    fn from(value: &'_ plan::DataValueSetter) -> Self {
-        let plan::DataValueSetter { path, set_value_to } = value;
+impl From<&'_ legacy::DataValueSetter> for next::FetchDataValueSetter {
+    fn from(value: &'_ legacy::DataValueSetter) -> Self {
+        let legacy::DataValueSetter { path, set_value_to } = value;
         Self {
-            path: path.0.iter().map(Into::into).collect(),
+            path: into_vec(&path.0),
             set_value_to: set_value_to.clone(),
         }
     }
 }
 
-impl From<&'_ plan::DataKeyRenamer> for next::FetchDataKeyRenamer {
-    fn from(value: &'_ plan::DataKeyRenamer) -> Self {
-        let plan::DataKeyRenamer {
+impl From<&'_ legacy::DataKeyRenamer> for next::FetchDataKeyRenamer {
+    fn from(value: &'_ legacy::DataKeyRenamer) -> Self {
+        let legacy::DataKeyRenamer {
             path,
             rename_key_to,
         } = value;
         Self {
-            path: path.0.iter().map(Into::into).collect(),
+            path: into_vec(&path.0),
             rename_key_to: rename_key_to.clone(),
         }
     }
 }
 
-impl From<&'_ path::PathElement> for next::FetchDataPathElement {
-    fn from(value: &'_ path::PathElement) -> Self {
+impl From<&'_ PathElement> for next::FetchDataPathElement {
+    fn from(value: &'_ PathElement) -> Self {
         match value {
-            path::PathElement::Key(name, conditions) => {
+            PathElement::Key(name, conditions) => {
                 if name == ".." {
                     Self::Parent
                 } else {
                     Self::Key(
-                        // TODO: unchecked due to the empty root key string.
+                        // Note: unchecked due to the empty root key string.
                         Name::new_unchecked(name),
-                        conditions.as_ref().map(|c| {
-                            c.iter()
-                                .map(|s| Name::new(s).expect("valid condition name"))
-                                .collect()
-                        }),
+                        from_legacy_type_conditions(conditions),
                     )
                 }
             }
-            path::PathElement::Flatten(conditions) => {
-                Self::AnyIndex(conditions.as_ref().map(|c| {
-                    c.iter()
-                        .map(|s| Name::new(s).expect("valid condition name"))
-                        .collect()
-                }))
+            PathElement::Flatten(conditions) => {
+                Self::AnyIndex(from_legacy_type_conditions(conditions))
             }
-            path::PathElement::Index(_) => Self::AnyIndex(None),
-            path::PathElement::Fragment(type_name) => {
+            PathElement::Index(_) => Self::AnyIndex(None),
+            PathElement::Fragment(type_name) => {
                 Self::TypenameEquals(Name::new(type_name).expect("valid type name"))
             }
         }
     }
 }
 
-impl From<&path::Path> for Vec<next::FetchDataPathElement> {
-    fn from(value: &path::Path) -> Self {
-        value.0.iter().map(Into::into).collect()
+fn from_legacy_type_conditions(conditions: &Option<Vec<String>>) -> Option<Vec<Name>> {
+    conditions.as_ref().map(|conds| {
+        conds
+            .iter()
+            .map(|c| Name::new(c).expect("valid condition name"))
+            .collect()
+    })
+}
+
+impl From<&Path> for Vec<next::FetchDataPathElement> {
+    fn from(value: &Path) -> Self {
+        into_vec(&value.0)
     }
+}
+
+fn into_box<T, U>(value: T) -> Box<U>
+where
+    U: From<T>,
+{
+    Box::new(value.into())
+}
+
+fn into_box_option<'a, T, U>(value: &'a Option<Box<T>>) -> Option<Box<U>>
+where
+    U: From<&'a T>,
+{
+    value.as_ref().map(|v| Box::new(v.as_ref().into()))
+}
+
+fn into_vec<'a, T, U>(value: &'a [T]) -> Vec<U>
+where
+    U: From<&'a T>,
+{
+    value.iter().map(Into::into).collect()
+}
+
+fn into_arc_vec_option<'a, T, U>(value: &'a Option<Vec<T>>) -> Vec<Arc<U>>
+where
+    U: From<&'a T>,
+{
+    value
+        .iter()
+        .flat_map(|v| v.iter().map(|i| Arc::new(i.into())))
+        .collect()
 }

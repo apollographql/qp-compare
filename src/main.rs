@@ -81,20 +81,28 @@ pub fn run_both_planners(schema_str: &str, query_str: &str, args: &PlanArgs) -> 
     println!("{}", rust_plan);
     let js_plan = run_legacy_planner(schema_str, query_str, None, args.into(), Default::default())
         .map_err(|err| err.join("\n"))?;
+    let js_plan_converted = convert_legacy_query_plan(&js_plan);
     if args.dump_plans {
         write_file(
-            "./plan_legacy.txt",
+            "./plan-legacy.txt",
             js_plan.formatted_query_plan.as_ref().unwrap(),
         );
-        write_file("./plan_legacy.detail.txt", &render_legacy_plan(&js_plan));
-        write_file("./plan_native.txt", rust_plan.to_string().as_str());
-        write_file("./plan_native.detail.txt", &render_native_plan(&rust_plan));
+        write_file("./plan-legacy.detail.txt", &render_legacy_plan(&js_plan));
+        write_file(
+            "./plan-legacy.json",
+            &serde_json::to_string_pretty(&js_plan_converted).unwrap(),
+        );
+        write_file("./plan-native.txt", rust_plan.to_string().as_str());
+        write_file("./plan-native.detail.txt", &render_native_plan(&rust_plan));
+        write_file(
+            "./plan-native.json",
+            &serde_json::to_string_pretty(&rust_plan).unwrap(),
+        );
     }
-    let js_plan = convert_legacy_query_plan(&js_plan);
-    match plan_matches(&js_plan, &rust_plan) {
+    match plan_matches(&js_plan_converted, &rust_plan) {
         Ok(_) => Ok(()),
         Err(match_failure) => {
-            let diff = diff_plan(&js_plan, &rust_plan);
+            let diff = diff_plan(&js_plan_converted, &rust_plan);
             Err(format!(
                 "Query plan mismatch:\n{match_failure:#?}\n\nDiff:\n{diff}"
             ))

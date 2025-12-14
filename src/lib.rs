@@ -1,6 +1,6 @@
 mod compare;
 mod convert;
-pub mod router;
+mod router;
 
 //=================================================================================================
 // Re-export underlying crates
@@ -12,8 +12,6 @@ pub use router_bridge;
 //=================================================================================================
 // Export semantic diff functions
 
-pub use crate::router::render_legacy_plan;
-pub use crate::router::render_native_plan;
 pub use compare::diff_plan;
 pub use compare::plan_matches;
 

@@ -8,7 +8,6 @@ pub(crate) mod plan_compare;
 
 use std::sync::Arc;
 
-use apollo_federation::query_plan::QueryPlan as NativeQueryPlan;
 pub(crate) use plan::*;
 use serde::Deserialize;
 
@@ -22,26 +21,4 @@ use serde::Deserialize;
 pub struct QueryPlanResult {
     pub formatted_query_plan: Option<Arc<String>>,
     pub(crate) query_plan: self::plan::QueryPlan,
-}
-
-//=================================================================================================
-// Render plans in the same formatting used by `diff_plan`.
-
-type LegacyQueryPlanResult = QueryPlanResult;
-
-pub fn render_legacy_plan(js_plan: &LegacyQueryPlanResult) -> String {
-    let js_root_node = &js_plan.query_plan.node;
-    match js_root_node {
-        None => String::from(""),
-        Some(js) => format!("{js:#?}"),
-    }
-}
-
-pub fn render_native_plan(rust_plan: &NativeQueryPlan) -> String {
-    let rust_root_node = convert::convert_root_query_plan_node(rust_plan);
-
-    match rust_root_node {
-        None => String::from(""),
-        Some(rust) => format!("{rust:#?}"),
-    }
 }

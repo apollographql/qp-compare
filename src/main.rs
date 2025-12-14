@@ -9,8 +9,6 @@ use qp_compare::diff_plan;
 use qp_compare::legacy_planner;
 use qp_compare::native_planner;
 use qp_compare::plan_matches;
-use qp_compare::render_legacy_plan;
-use qp_compare::render_native_plan;
 use qp_compare::run_legacy_planner;
 use qp_compare::run_native_planner;
 
@@ -87,13 +85,11 @@ pub fn run_both_planners(schema_str: &str, query_str: &str, args: &PlanArgs) -> 
             "./plan-legacy.txt",
             js_plan.formatted_query_plan.as_ref().unwrap(),
         );
-        write_file("./plan-legacy.detail.txt", &render_legacy_plan(&js_plan));
         write_file(
             "./plan-legacy.json",
             &serde_json::to_string_pretty(&js_plan_converted).unwrap(),
         );
         write_file("./plan-native.txt", rust_plan.to_string().as_str());
-        write_file("./plan-native.detail.txt", &render_native_plan(&rust_plan));
         write_file(
             "./plan-native.json",
             &serde_json::to_string_pretty(&rust_plan).unwrap(),

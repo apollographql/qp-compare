@@ -1,5 +1,6 @@
 mod compare;
 mod convert;
+mod pretty_plan;
 mod router;
 
 //=================================================================================================
@@ -14,6 +15,7 @@ pub use router_bridge;
 
 pub use compare::diff_plan;
 pub use compare::plan_matches;
+pub use pretty_plan::pretty_query_plan;
 
 //=================================================================================================
 // Helper functions for running query planners
@@ -39,8 +41,7 @@ pub fn run_native_planner(
         query_str,
         query_path,
     )?;
-    let plan = planner.build_query_plan(&query_doc, query_name, plan_options)?;
-    Ok(plan)
+    planner.build_query_plan(&query_doc, query_name, plan_options)
 }
 
 pub fn run_legacy_planner(

@@ -98,9 +98,10 @@ pub fn run_both_planners(schema_str: &str, query_str: &str, args: &PlanArgs) -> 
     match plan_matches(&js_plan_converted, &rust_plan) {
         Ok(_) => Ok(()),
         Err(match_failure) => {
-            let diff = diff_plan(&js_plan_converted, &rust_plan);
+            let diff = diff_plan(schema_str, &js_plan_converted, &rust_plan);
             Err(format!(
-                "Query plan mismatch:\n{match_failure:#?}\n\nDiff:\n{diff}"
+                "Query plan mismatch:\n{diff}\n{}",
+                match_failure.description()
             ))
         }
     }

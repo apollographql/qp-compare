@@ -23,6 +23,8 @@ use apollo_federation::query_plan::TopLevelPlanNode;
 use apollo_federation::query_plan::requires_selection::Selection;
 use apollo_federation::query_plan::serializable_document::SerializableDocument;
 
+use crate::pretty_plan::pretty_query_plan_node;
+
 //==================================================================================================
 // Public interface
 
@@ -89,29 +91,38 @@ pub fn plan_matches(
     opt_top_level_plan_node_matches(&js_plan.node, &rust_plan.node)
 }
 
-pub fn diff_plan(js_plan: &NativeQueryPlan, rust_plan: &NativeQueryPlan) -> String {
+pub fn diff_plan(
+    schema_str: &str,
+    js_plan: &NativeQueryPlan,
+    rust_plan: &NativeQueryPlan,
+) -> String {
     let js_root_node = &js_plan.node;
     let rust_root_node = &rust_plan.node;
 
     match (js_root_node, rust_root_node) {
         (None, None) => String::from(""),
         (None, Some(rust)) => {
-            let rust = serde_yaml::to_string(&rust).unwrap();
+            let rust = render_plan(schema_str, rust);
             let differences = diff::lines("", &rust);
             render_diff(&differences)
         }
         (Some(js), None) => {
-            let js = serde_yaml::to_string(&js).unwrap();
+            let js = render_plan(schema_str, js);
             let differences = diff::lines(&js, "");
             render_diff(&differences)
         }
         (Some(js), Some(rust)) => {
-            let rust = serde_yaml::to_string(&rust).unwrap();
-            let js = serde_yaml::to_string(&js).unwrap();
+            let rust = render_plan(schema_str, rust);
+            let js = render_plan(schema_str, js);
             let differences = diff::lines(&js, &rust);
             render_diff(&differences)
         }
     }
+}
+
+fn render_plan(schema_str: &str, plan_node: &TopLevelPlanNode) -> String {
+    let pretty_node = pretty_query_plan_node(schema_str, plan_node);
+    serde_yaml::to_string(&pretty_node).unwrap()
 }
 
 fn render_diff(differences: &[diff::Result<&str>]) -> String {

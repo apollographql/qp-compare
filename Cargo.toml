@@ -6,6 +6,13 @@ edition = "2024"
 [lib]
 name = "qp_compare"
 
+[[bin]]
+name = "qp-compare"
+required-features = ["js"]
+
+[features]
+js = ["router-bridge", "tokio"]
+
 [profile.release]
 opt-level = 1  # Note: 2 or above seems to cause deno runtime errors.
 
@@ -13,7 +20,7 @@ opt-level = 1  # Note: 2 or above seems to cause deno runtime errors.
 # Apollo internal dependencies
 apollo-compiler = "1.28"
 apollo-federation = { git = "https://github.com/apollographql/router", branch = "dev" }
-router-bridge = "=0.6.4+v2.9.3"
+router-bridge = { version = "=0.6.4+v2.9.3", optional = true }
 
 # Other dependencies
 clap = { version = "4", features = ["derive"] }
@@ -23,5 +30,5 @@ regex = "1"
 serde = "1"
 serde_json = "1"
 serde_json_bytes = { version = "0.2", features = ["preserve_order"] }
-serde_yaml = "0.9"
-tokio = { version = "1", features = ["full"] }
+serde_yaml = { package = "serde_yaml_ng", version = "0.10" }
+tokio = { version = "1", features = ["full"], optional = true }

@@ -8,6 +8,8 @@ pub(crate) mod plan_compare;
 
 use std::sync::Arc;
 
+pub(crate) use path::Path;
+pub(crate) use path::PathElement;
 pub(crate) use plan::*;
 use serde::Deserialize;
 

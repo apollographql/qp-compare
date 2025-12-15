@@ -4,12 +4,12 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use qp_compare::convert_legacy_query_plan;
 use qp_compare::diff_plan;
 use qp_compare::legacy_planner;
+use qp_compare::legacy_planner::convert_legacy_query_plan;
+use qp_compare::legacy_planner::run_legacy_planner;
 use qp_compare::native_planner;
 use qp_compare::plan_matches;
-use qp_compare::run_legacy_planner;
 use qp_compare::run_native_planner;
 
 #[derive(Debug, clap::Parser)]

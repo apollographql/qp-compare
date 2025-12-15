@@ -1,14 +1,13 @@
 mod compare;
-mod convert;
+#[cfg(feature = "js")]
+pub mod legacy_planner;
 mod pretty_plan;
-mod router;
 
 //=================================================================================================
 // Re-export underlying crates
 
 pub use apollo_compiler;
 pub use apollo_federation;
-pub use router_bridge;
 
 //=================================================================================================
 // Export semantic diff functions
@@ -18,13 +17,11 @@ pub use compare::plan_matches;
 pub use pretty_plan::pretty_query_plan;
 
 //=================================================================================================
-// Helper functions for running query planners
+// Helper function for running the native query planner
 
-pub use crate::router::QueryPlanResult as LegacyQueryPlanResult;
 pub use apollo_federation::error::FederationError;
 pub use apollo_federation::query_plan::QueryPlan as NativeQueryPlan;
 pub use apollo_federation::query_plan::query_planner as native_planner;
-pub use router_bridge::planner as legacy_planner;
 
 pub fn run_native_planner(
     schema_str: &str,
@@ -42,28 +39,4 @@ pub fn run_native_planner(
         query_path,
     )?;
     planner.build_query_plan(&query_doc, query_name, plan_options)
-}
-
-pub fn run_legacy_planner(
-    schema_str: &str,
-    query_str: &str,
-    query_name: Option<String>,
-    config: legacy_planner::QueryPlannerConfig,
-    plan_options: legacy_planner::PlanOptions,
-) -> Result<LegacyQueryPlanResult, Vec<String>> {
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-    let planner = runtime
-        .block_on(legacy_planner::Planner::new(schema_str.to_string(), config))
-        .unwrap();
-    let result = runtime
-        .block_on(planner.plan(query_str.to_string(), query_name, plan_options))
-        .unwrap();
-    if let Some(errors) = result.errors {
-        return Err(errors.iter().map(|e| e.to_string()).collect());
-    }
-    Ok(result.data.unwrap())
-}
-
-pub fn convert_legacy_query_plan(js_plan: &LegacyQueryPlanResult) -> NativeQueryPlan {
-    convert::convert_root_query_plan_node(&js_plan.query_plan)
 }

@@ -1270,14 +1270,14 @@ mod qp_selection_comparison_tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "js"))]
 mod path_comparison_tests {
     use apollo_compiler::name;
     use serde_json::json;
 
     use super::*;
 
-    type LegacyPath = crate::router::path::Path;
+    type LegacyPath = crate::legacy_planner::Path;
 
     macro_rules! matches_deserialized_path {
         ($json:expr, $expected:expr) => {

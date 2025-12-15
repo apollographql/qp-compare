@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use apollo_federation::query_plan as next;
 
-use crate::router::path;
-use crate::router::plan;
+use super::path;
+use super::plan;
 
 pub(crate) fn convert_root_query_plan_node(js: &next::QueryPlan) -> Option<plan::PlanNode> {
     let next::QueryPlan {

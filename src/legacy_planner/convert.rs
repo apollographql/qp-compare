@@ -4,9 +4,8 @@ use std::sync::Arc;
 use apollo_compiler::Name;
 use apollo_federation::query_plan as next;
 
-use crate::router::path::Path;
-use crate::router::path::PathElement;
-use crate::router::plan as legacy;
+use super::router as legacy;
+use legacy::PathElement;
 
 pub(crate) fn convert_root_query_plan_node(plan: &legacy::QueryPlan) -> next::QueryPlan {
     let legacy::QueryPlan { node } = plan;
@@ -295,8 +294,8 @@ fn from_legacy_type_conditions(conditions: &Option<Vec<String>>) -> Option<Vec<N
     })
 }
 
-impl From<&Path> for Vec<next::FetchDataPathElement> {
-    fn from(value: &Path) -> Self {
+impl From<&legacy::Path> for Vec<next::FetchDataPathElement> {
+    fn from(value: &legacy::Path) -> Self {
         into_vec(&value.0)
     }
 }

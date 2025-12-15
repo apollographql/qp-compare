@@ -100,7 +100,7 @@ pub fn run_both_planners(schema_str: &str, query_str: &str, args: &PlanArgs) -> 
         Err(match_failure) => {
             let diff = diff_plan(schema_str, &js_plan_converted, &rust_plan);
             Err(format!(
-                "Query plan mismatch:\n{diff}\n{}",
+                "Query plan mismatch (diff in YAML):\n{diff}\n{}",
                 match_failure.description()
             ))
         }
@@ -114,7 +114,7 @@ fn main() -> ExitCode {
     let result = run_both_planners(&schema, &query, &args);
     match result {
         Err(error) => {
-            eprintln!("{error}");
+            eprintln!("\n{error}");
             ExitCode::FAILURE
         }
 

@@ -18,8 +18,8 @@ opt-level = 1  # Note: 2 or above seems to cause deno runtime errors.
 
 [dependencies]
 # Apollo internal dependencies
-apollo-compiler = "1.28"
-apollo-federation = { git = "https://github.com/apollographql/router", branch = "dev" }
+apollo-compiler = "1.31"
+apollo-federation = "2.10"
 router-bridge = { version = "=0.6.4+v2.9.3", optional = true }
 
 # Other dependencies

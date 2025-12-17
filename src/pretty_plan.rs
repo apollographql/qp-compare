@@ -9,31 +9,20 @@ use apollo_federation::query_plan::PlanNode;
 use apollo_federation::query_plan::QueryPlan;
 use apollo_federation::query_plan::TopLevelPlanNode;
 use apollo_federation::query_plan::query_planner;
-use apollo_federation::query_plan::query_planner::QueryPlanningStatistics;
 use apollo_federation::query_plan::serializable_document::SerializableDocument;
 use apollo_federation::schema::ValidFederationSchema;
 
 pub fn pretty_query_plan(schema_str: &str, plan: &QueryPlan) -> QueryPlan {
-    let statistics = QueryPlanningStatistics {
-        evaluated_plan_count: plan.statistics.evaluated_plan_count.clone(),
-        evaluated_plan_paths: plan.statistics.evaluated_plan_paths.clone(),
-        best_plan_cost: plan.statistics.best_plan_cost,
-    };
-    if let Some(node) = &plan.node {
-        QueryPlan {
-            node: Some(pretty_query_plan_node(schema_str, node)),
-            statistics,
-        }
-    } else {
-        QueryPlan {
-            node: None,
-            statistics,
-        }
-    }
+    let node = plan
+        .node
+        .as_ref()
+        .map(|node| pretty_query_plan_node(schema_str, node));
+    let statistics = plan.statistics.clone();
+    QueryPlan { node, statistics }
 }
 
 pub fn pretty_query_plan_node(schema_str: &str, node: &TopLevelPlanNode) -> TopLevelPlanNode {
-    let mut node = clone_top_level_plan_node(node);
+    let mut node = node.clone();
     traverse_top_level_plan_node(&subgraph_schemas(schema_str), &mut node);
     node
 }
@@ -42,21 +31,6 @@ fn subgraph_schemas(schema_str: &str) -> IndexMap<Arc<str>, ValidFederationSchem
     let supergraph = apollo_federation::Supergraph::new_with_router_specs(schema_str).unwrap();
     let planner = query_planner::QueryPlanner::new(&supergraph, Default::default()).unwrap();
     planner.subgraph_schemas().clone()
-}
-
-// Oddly, TopLevelPlanNode does not implement Clone, yet.
-fn clone_top_level_plan_node(node: &TopLevelPlanNode) -> TopLevelPlanNode {
-    match node {
-        TopLevelPlanNode::Fetch(fetch_node) => TopLevelPlanNode::Fetch(fetch_node.clone()),
-        TopLevelPlanNode::Sequence(seq_node) => TopLevelPlanNode::Sequence(seq_node.clone()),
-        TopLevelPlanNode::Parallel(par_node) => TopLevelPlanNode::Parallel(par_node.clone()),
-        TopLevelPlanNode::Flatten(flat_node) => TopLevelPlanNode::Flatten(flat_node.clone()),
-        TopLevelPlanNode::Defer(defer_node) => TopLevelPlanNode::Defer(defer_node.clone()),
-        TopLevelPlanNode::Condition(cond_node) => TopLevelPlanNode::Condition(cond_node.clone()),
-        TopLevelPlanNode::Subscription(sub_node) => {
-            TopLevelPlanNode::Subscription(sub_node.clone())
-        }
-    }
 }
 
 fn pretty_fetch_node(schema: &ValidFederationSchema, fetch: &mut FetchNode) {

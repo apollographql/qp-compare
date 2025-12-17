@@ -12,19 +12,15 @@ use apollo_federation::query_plan::query_planner;
 use apollo_federation::query_plan::serializable_document::SerializableDocument;
 use apollo_federation::schema::ValidFederationSchema;
 
-pub fn pretty_query_plan(schema_str: &str, plan: &QueryPlan) -> QueryPlan {
-    let node = plan
-        .node
-        .as_ref()
-        .map(|node| pretty_query_plan_node(schema_str, node));
-    let statistics = plan.statistics.clone();
-    QueryPlan { node, statistics }
+/// Make all fetch operations to be pretty-printed for serialization.
+pub fn pretty_query_plan(schema_str: &str, plan: &mut QueryPlan) {
+    if let Some(node) = &mut plan.node {
+        pretty_query_plan_node(schema_str, node);
+    }
 }
 
-pub fn pretty_query_plan_node(schema_str: &str, node: &TopLevelPlanNode) -> TopLevelPlanNode {
-    let mut node = node.clone();
-    traverse_top_level_plan_node(&subgraph_schemas(schema_str), &mut node);
-    node
+pub fn pretty_query_plan_node(schema_str: &str, node: &mut TopLevelPlanNode) {
+    traverse_top_level_plan_node(&subgraph_schemas(schema_str), node);
 }
 
 fn subgraph_schemas(schema_str: &str) -> IndexMap<Arc<str>, ValidFederationSchema> {
@@ -35,12 +31,13 @@ fn subgraph_schemas(schema_str: &str) -> IndexMap<Arc<str>, ValidFederationSchem
 
 fn pretty_fetch_node(schema: &ValidFederationSchema, fetch: &mut FetchNode) {
     // Update `operation_document` with a pretty-printed version.
-    // - Note: `SerializableDocument::from_parsed` can't be used, since it uses unindented text.
+    // - Note: `SerializableDocument::from_parsed` can't be used, since it sets unindented text.
     // - Note: This loses the parsed AST.
     if let Ok(doc) = fetch.operation_document.as_parsed() {
+        // If it's already parsed, update the operation_document with the pretty-printed version.
         fetch.operation_document = SerializableDocument::from_string(doc.to_string());
     } else {
-        // Parse the serialized document
+        // The operation document is not parsed yet. Parse it first.
         let doc = ExecutableDocument::parse_and_validate(
             schema.schema(),
             fetch.operation_document.as_serialized(),

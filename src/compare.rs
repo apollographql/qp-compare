@@ -121,8 +121,9 @@ pub fn diff_plan(
 }
 
 fn render_plan(schema_str: &str, plan_node: &TopLevelPlanNode) -> String {
-    let pretty_node = pretty_query_plan_node(schema_str, plan_node);
-    serde_yaml::to_string(&pretty_node).unwrap()
+    let mut node = plan_node.clone();
+    pretty_query_plan_node(schema_str, &mut node);
+    serde_yaml::to_string(&node).unwrap()
 }
 
 fn render_diff(differences: &[diff::Result<&str>]) -> String {
